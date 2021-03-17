@@ -1,0 +1,3477 @@
+<!DOCTYPE html>
+<html  lang="zh">
+<head>
+    <meta charset="utf-8" />
+
+<meta name="generator" content="Hexo 3.9.0" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+<title>我以为我很懂Promise，直到我开始实现Promise/A+规范 - Tusi博客|前端分享驿站</title>
+
+
+    <meta name="description" content="我一度以为自己很懂Promise，直到前段时间尝试去实现Promise/A+规范时，才发现自己对Promise的理解还过于浅薄。在我按照Promise/A+规范去写具体代码实现的过程中，我经历了从“很懂”到“陌生”，再到“领会”的过山车式的认知转变，对Promise有了更深刻的认识！">
+<meta name="keywords" content="Promise&#x2F;A+,宏任务,微任务,Tusi,博客,前端,全栈,微信小程序">
+<meta property="og:type" content="article">
+<meta property="og:title" content="我以为我很懂Promise，直到我开始实现Promise&#x2F;A+规范">
+<meta property="og:url" content="http://hexo.wbjiang.cn/我以为我很懂Promise.html">
+<meta property="og:site_name" content="Tusi博客|前端分享驿站">
+<meta property="og:description" content="我一度以为自己很懂Promise，直到前段时间尝试去实现Promise/A+规范时，才发现自己对Promise的理解还过于浅薄。在我按照Promise/A+规范去写具体代码实现的过程中，我经历了从“很懂”到“陌生”，再到“领会”的过山车式的认知转变，对Promise有了更深刻的认识！">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://qncdn.wbjiang.cn/pap.png">
+<meta property="og:updated_time" content="2021-03-17T13:36:29.499Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="我以为我很懂Promise，直到我开始实现Promise&#x2F;A+规范">
+<meta name="twitter:description" content="我一度以为自己很懂Promise，直到前段时间尝试去实现Promise/A+规范时，才发现自己对Promise的理解还过于浅薄。在我按照Promise/A+规范去写具体代码实现的过程中，我经历了从“很懂”到“陌生”，再到“领会”的过山车式的认知转变，对Promise有了更深刻的认识！">
+<meta name="twitter:image" content="https://qncdn.wbjiang.cn/pap.png">
+
+
+
+
+
+
+
+<link rel="icon" href="/images/favicon.svg">
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.7.2/css/bulma.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:400,600|Source+Code+Pro">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css">
+
+
+    
+    
+    
+    <style>body>.footer,body>.navbar,body>.section{opacity:0}</style>
+    
+
+    
+    
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css">
+    
+
+    
+    
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.css">
+
+
+    
+    
+    
+    
+
+<link rel="stylesheet" href="/css/back-to-top.css">
+
+
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+<link rel="stylesheet" href="/css/progressbar.css">
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+    
+    
+    
+
+
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="is-3-column">
+    <nav class="navbar navbar-main">
+    <div class="container">
+        <div class="navbar-brand is-flex-center">
+            <a class="navbar-item navbar-logo" href="/">
+            
+                <img src="/images/logo.svg" alt="我以为我很懂Promise，直到我开始实现Promise/A+规范" height="28">
+            
+            </a>
+        </div>
+        <div class="navbar-menu">
+            
+            <div class="navbar-start">
+                
+                <a class="navbar-item"
+                href="/">Home</a>
+                
+                <a class="navbar-item"
+                href="/archives">Archives</a>
+                
+                <a class="navbar-item"
+                href="/categories">Categories</a>
+                
+                <a class="navbar-item"
+                href="/tags">Tags</a>
+                
+                <a class="navbar-item"
+                href="/about">About</a>
+                
+            </div>
+            
+            <div class="navbar-end">
+                
+                    
+                    
+                    <a class="navbar-item" target="_blank" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                    
+                
+                
+                
+                <a class="navbar-item search" title="搜索" href="javascript:;">
+                    <i class="fas fa-search"></i>
+                </a>
+                
+            </div>
+        </div>
+    </div>
+</nav>
+    
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-8-tablet is-8-desktop is-6-widescreen has-order-2 column-main"><div class="card">
+    
+    <div class="card-image">
+        <span  class="image is-7by1">
+            <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/pap.png" alt="我以为我很懂Promise，直到我开始实现Promise/A+规范">
+        </span>
+    </div>
+    
+    <div class="card-content article ">
+        
+        <div class="level article-meta is-size-7 is-uppercase is-mobile is-overflow-x-auto">
+            <div class="level-left">
+                <time class="level-item has-text-grey" datetime="2021-03-07T12:57:19.000Z">2021-03-07</time>
+                
+                <div class="level-item">
+                <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                </div>
+                
+                
+                <span class="level-item has-text-grey">
+                    
+                    
+                    1 小时 读完 (大约 10021 个字)
+                </span>
+                
+                
+            </div>
+        </div>
+        
+        <h1 class="title is-size-3 is-size-4-mobile has-text-weight-normal">
+            
+                我以为我很懂Promise，直到我开始实现Promise/A+规范
+            
+        </h1>
+        <div class="content">
+            <p>我一度以为自己很懂Promise，直到前段时间尝试去实现Promise/A+规范时，才发现自己对Promise的理解还过于浅薄。在我按照Promise/A+规范去写具体代码实现的过程中，我经历了从“很懂”到“陌生”，再到“领会”的过山车式的认知转变，对Promise有了更深刻的认识！</p>
+<a id="more"></a>
+
+<p>TL;DR：鉴于很多人不想看长文，这里直接给出我写的Promise/A+规范的Javascript实现。</p>
+<ul>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin" target="_blank" rel="noopener">github仓库：promises-aplus-robin</a>（顺手点个star就更好了）</li>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin/blob/main/promises-aplus-robin.js" target="_blank" rel="noopener">源码</a></li>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin/blob/main/promises-aplus-robin-annotated.js" target="_blank" rel="noopener">源码注释版</a></li>
+</ul>
+<p>promises-tests测试用例是全部通过的。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/promiseaplus.gif" alt></p>
+<h1 id="Promise源于现实世界"><a href="#Promise源于现实世界" class="headerlink" title="Promise源于现实世界"></a>Promise源于现实世界</h1><p>Promise直译过来就是<strong>承诺</strong>，最新的红宝书已经将其翻译为<strong>期约</strong>。当然，这都不重要，程序员之间只要一个眼神就懂了。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/006APoFYly1g3wl7l06rug307s07snnx.gif" alt="你懂的"></p>
+<h2 id="许下承诺"><a href="#许下承诺" class="headerlink" title="许下承诺"></a>许下承诺</h2><p>作为打工人，我们不可避免地会接到各种饼，比如口头吹捧的饼、升值加薪的饼、股权激励的饼……</p>
+<p>有些饼马上就兑现了，比如口头褒奖，因为它本身没有给企业带来什么成本；有些饼却关乎企业实际利益，它们可能未来可期，也可能猴年马月，或是无疾而终，又或者直接宣告画饼失败。</p>
+<p>画饼这个动作，于Javascript而言，就是创建一个Promise实例：</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">const bing = new Promise((resolve, reject) =&gt; &#123;</span><br><span class="line">  // 祝各位的饼都能圆满成功</span><br><span class="line">  if (&apos;画饼成功&apos;) &#123;</span><br><span class="line">    resolve(&apos;大家happy&apos;)</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    reject(&apos;有难同当&apos;)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>Promise跟这些饼很像，分为三种状态：</p>
+<ul>
+<li>pending: 饼已画好，坐等实现。</li>
+<li>fulfilled: 饼真的实现了，走上人生巅峰。</li>
+<li>rejected: 不好意思，画饼失败，emmm…</li>
+</ul>
+<h2 id="订阅承诺"><a href="#订阅承诺" class="headerlink" title="订阅承诺"></a>订阅承诺</h2><p>有人画饼，自然有人接饼。所谓“接饼”，就是对于这张饼的可能性做下设想。如果饼真的实现了，鄙人将别墅靠海；如果饼失败了，本打工仔以泪洗面。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/62528dc5gy1g5hn3u2my3j20rs0rs7aa.jpg" alt></p>
+<p>转换成Promise中的概念，这是一种订阅的模式，成功和失败的情况我们都要订阅，并作出反应。订阅是通过<code>then</code>，<code>catch</code>等方法实现的。</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">// 通过then方法进行订阅</span><br><span class="line">bing.then(</span><br><span class="line">  // 对画饼成功的情况作出反应</span><br><span class="line">  success =&gt; &#123;</span><br><span class="line">    console.log(&apos;别墅靠海&apos;)</span><br><span class="line">  &#125;,</span><br><span class="line">  // 对画饼失败的情况作出反应</span><br><span class="line">  fail =&gt; &#123;</span><br><span class="line">    console.log(&apos;以泪洗面...&apos;)</span><br><span class="line">  &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h2 id="链式传播"><a href="#链式传播" class="headerlink" title="链式传播"></a>链式传播</h2><p>众所周知，老板可以给高层或领导们画饼，而领导们拿着老板画的饼，也必须给底下员工继续画饼，让打工人们鸡血不停，这样大家的饼才都有可能兑现。</p>
+<p>这种自上而下发饼的行为与Promise的链式调用在思路上不谋而合。</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">bossBing.then(</span><br><span class="line">  success =&gt; &#123;</span><br><span class="line">    // leader接过boss的饼，继续往下面发饼</span><br><span class="line">    return leaderBing</span><br><span class="line">  &#125;</span><br><span class="line">).then(</span><br><span class="line">  success =&gt; &#123;</span><br><span class="line">    console.log(&apos;leader画的饼真的实现了，别墅靠海&apos;)</span><br><span class="line">  &#125;,</span><br><span class="line">  fail =&gt; &#123;</span><br><span class="line">    console.log(&apos;leader画的饼炸了，以泪洗面...&apos;)</span><br><span class="line">  &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>总体来说，Promise与现实世界的承诺还是挺相似的。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/tatanhaha.gif" alt></p>
+<p>而Promise在具体实现上还有很多细节，比如异步处理的细节，Resolution算法，等等，这些在后面都会讲到。下面我会从自己<strong>对Promise的第一印象</strong>讲起，继而过渡到对<strong>宏任务与微任务</strong>的认识，最终揭开<strong>Promise/A+规范</strong>的神秘面纱。</p>
+<h1 id="初识Promise"><a href="#初识Promise" class="headerlink" title="初识Promise"></a>初识Promise</h1><p>还记得最早接触Promise的时候，我感觉能把ajax过程封装起来就挺“厉害”了。那个时候对Promise的印象大概就是：<strong>优雅的异步封装，不再需要写高耦合的callback</strong>。</p>
+<p>这里临时手撸一个简单的ajax封装作为示例说明：</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">isObject</span>(<span class="hljs-params">val</span>) </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">return</span> <span class="hljs-built_in">Object</span>.prototype.toString.call(val) === <span class="hljs-string">'[object Object]'</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">serialize</span>(<span class="hljs-params">params</span>) </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">let</span> result = <span class="hljs-string">''</span>;</span><br><span class="line">    <span class="hljs-keyword">if</span> (isObject(params)) &#123;</span><br><span class="line">      <span class="hljs-built_in">Object</span>.keys(params).forEach(<span class="hljs-function">(<span class="hljs-params">key</span>) =&gt;</span> &#123;</span><br><span class="line">        <span class="hljs-keyword">let</span> val = <span class="hljs-built_in">encodeURIComponent</span>(params[key]);</span><br><span class="line">        result += <span class="hljs-string">`<span class="hljs-subst">$&#123;key&#125;</span>=<span class="hljs-subst">$&#123;val&#125;</span>&amp;`</span>;</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="hljs-keyword">return</span> result;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">const</span> defaultHeaders = &#123;</span><br><span class="line">  <span class="hljs-string">"Content-Type"</span>: <span class="hljs-string">"application/x-www-form-urlencoded"</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-comment">// ajax简单封装</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">request</span>(<span class="hljs-params">options</span>) </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-keyword">const</span> &#123; method, url, params, headers &#125; = options</span><br><span class="line">    <span class="hljs-keyword">const</span> xhr = <span class="hljs-keyword">new</span> XMLHttpRequest();</span><br><span class="line">    <span class="hljs-keyword">if</span> (method === <span class="hljs-string">'GET'</span> || method === <span class="hljs-string">'DELETE'</span>) &#123;</span><br><span class="line">      <span class="hljs-comment">// GET和DELETE一般用querystring传参</span></span><br><span class="line">      <span class="hljs-keyword">const</span> requestURL = url + <span class="hljs-string">'?'</span> + serialize(params)</span><br><span class="line">      xhr.open(method, requestURL, <span class="hljs-literal">true</span>);</span><br><span class="line">    &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">      xhr.open(method, url, <span class="hljs-literal">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="hljs-comment">// 设置请求头</span></span><br><span class="line">    <span class="hljs-keyword">const</span> mergedHeaders = <span class="hljs-built_in">Object</span>.assign(&#123;&#125;, defaultHeaders, headers)</span><br><span class="line">    <span class="hljs-built_in">Object</span>.keys(mergedHeaders).forEach(<span class="hljs-function"><span class="hljs-params">key</span> =&gt;</span> &#123;</span><br><span class="line">      xhr.setRequestHeader(key, mergedHeaders[key]);</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="hljs-comment">// 状态监听</span></span><br><span class="line">    xhr.onreadystatechange = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>&#123;</span><br><span class="line">      <span class="hljs-keyword">if</span>(xhr.readyState === <span class="hljs-number">4</span> &amp;&amp; xhr.status === <span class="hljs-number">200</span>) &#123;</span><br><span class="line">        resolve(xhr.response)</span><br><span class="line">      &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">        reject(xhr.status)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    xhr.onerror = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>) </span>&#123;</span><br><span class="line">      reject(e)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="hljs-comment">// 处理body数据，发送请求</span></span><br><span class="line">    <span class="hljs-keyword">const</span> data = method === <span class="hljs-string">'POST'</span> || method === <span class="hljs-string">'PUT'</span> ? serialize(params) : <span class="hljs-literal">null</span></span><br><span class="line">    xhr.send(data);</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">const</span> options = &#123;</span><br><span class="line">  method: <span class="hljs-string">'GET'</span>,</span><br><span class="line">  url: <span class="hljs-string">'/user/page'</span>,</span><br><span class="line">  params: &#123;</span><br><span class="line">    pageNo: <span class="hljs-number">1</span>,</span><br><span class="line">    pageSize: <span class="hljs-number">10</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="hljs-comment">// 通过Promise的形式调用接口</span></span><br><span class="line">request(options).then(<span class="hljs-function"><span class="hljs-params">res</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="hljs-comment">// 请求成功</span></span><br><span class="line">&#125;, fail =&gt; &#123;</span><br><span class="line">  <span class="hljs-comment">// 请求失败</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>以上代码封装了ajax的主要过程，而其他很多细节和各种场景覆盖就不是几十行代码能说完的。不过我们可以看到，Promise封装的核心就是：</p>
+<ul>
+<li>封装一个函数，将包含异步过程的代码包裹在构造Promise的executor中，所封装的函数最后需要return这个Promise实例。</li>
+<li>Promise有三种状态，Pending, Fulfilled, Rejected。而<code>resolve()</code>, <code>reject()</code>是状态转移的触发器。</li>
+<li>确定状态转移的条件，在本例中，我们认为ajax响应且状态码为200时，请求成功（执行<code>resolve()</code>），否则请求失败（执行<code>reject()</code>）。</li>
+</ul>
+<p>ps: 实际业务中，除了判断HTTP状态码，我们还会另外判断<strong>内部错误码</strong>（业务系统中前后端约定的状态code）。</p>
+<p>实际上现在有了axios这类的解决方案，我们也不会轻易选择自行封装ajax，<strong>不鼓励重复造这种基础且重要的轮子</strong>，更别说有些场景我们往往难以考虑周全。当然，在时间允许的情况下，可以学习其源码实现。</p>
+<h1 id="宏任务与微任务"><a href="#宏任务与微任务" class="headerlink" title="宏任务与微任务"></a>宏任务与微任务</h1><p>要理解Promise/A+规范，必须先溯本求源，Promise与微任务息息相关，所以我们有必要先对宏任务和微任务有个基本认识。</p>
+<p>在很长一段时间里，我都没有太多去关注<strong>宏任务（Task）与微任务（Microtask）</strong>。甚至有一段时间，我觉得<code>setTimeout(fn, 0)</code>在操作动态生成的DOM元素时非常好用，然而并不知道其背后的原理，实质上这跟<strong>Task</strong>联系紧密。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">var</span> button = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'button'</span>);</span><br><span class="line">button.innerText = <span class="hljs-string">'新增输入框'</span></span><br><span class="line"><span class="hljs-built_in">document</span>.body.append(button)</span><br><span class="line"></span><br><span class="line">button.onmousedown = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">var</span> input = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'input'</span>);</span><br><span class="line">  <span class="hljs-built_in">document</span>.body.appendChild(input);</span><br><span class="line">  setTimeout(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>&#123;</span><br><span class="line">    input.focus();</span><br><span class="line">  &#125;, <span class="hljs-number">0</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果不使用<code>setTimeout 0</code>，<code>focus()</code>会没有效果。</p>
+<p>那么，什么是宏任务和微任务呢？我们慢慢来揭开答案。</p>
+<p>现代浏览器采用<strong>多进程架构</strong>，这一点可以参考<a href="https://developers.google.com/web/updates/2018/09/inside-browser-part1" title="Inside look at modern web browser" target="_blank" rel="noopener">Inside look at modern web browser</a>。而和我们前端关系最紧密的就是其中的<strong>Renderer Process</strong>，Javascript便是运行在Renderer Process的<strong>Main Thread</strong>中。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A4%9A%E8%BF%9B%E7%A8%8B.png" alt></p>
+<blockquote>
+<p>Renderer: Controls anything inside of the tab where a website is displayed.</p>
+</blockquote>
+<p>渲染进程控制了展示在Tab页中的网页的一切事情。可以理解为渲染进程就是专门为具体的某个网页服务的。</p>
+<p>我们知道，Javascript可以直接与界面交互。假想一下，如果Javascript采用多线程策略，各个线程都能操作DOM，那最终的界面呈现到底以谁为准呢？这显然是存在矛盾的。因此，Javascript选择使用单线程模型的一个重要原因就是：<strong>为了保证用户界面的强一致性</strong>。</p>
+<p>为了保证界面交互的连贯性和平滑度，Main Thread中，Javascript的执行和页面的渲染会交替执行（出于性能考虑，某些情况下，浏览器判断不需要执行界面渲染，会略过渲染的步骤）。目前大多数设备的屏幕刷新率为60次/秒，1帧大约是16.67ms，在这1帧的周期内，既要完成Javascript的执行，还要完成界面的渲染（if necessary），利用人眼的残影效应，让用户觉得界面交互是非常流畅的。</p>
+<blockquote>
+<p>用一张图看看1帧的基本过程，引用自<a href="https://aerotwist.com/blog/the-anatomy-of-a-frame/" target="_blank" rel="noopener">https://aerotwist.com/blog/the-anatomy-of-a-frame/</a></p>
+</blockquote>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/anatomy-of-a-frame.svg" alt="解剖1帧"></p>
+<p>PS：requestIdleCallback是空闲回调，在1帧的末尾，如果还有时间富余，就会调用requestIdleCallback。注意不要在requestIdleCallback中修改DOM，或者读取布局信息导致触发<strong>Forced Synchronized Layout</strong>，否则会引发性能和体验问题。具体见<a href="https://developers.google.com/web/updates/2015/08/using-requestidlecallback?hl=en#using_requestidlecallback_to_make_dom_changes" title="Using requestIdleCallback" target="_blank" rel="noopener">Using requestIdleCallback</a>。</p>
+<p>我们知道，一个网页中的Render Process只有一个Main Thread，本质上来说，Javascript的任务在执行阶段都是按顺序执行，但是JS引擎在解析Javascript代码时，会把代码分为同步任务和异步任务。同步任务直接进入Main Thread执行；异步任务进入任务队列，并关联着一个异步回调。</p>
+<p>在一个web app中，我们会写一些Javascript代码或者引用一些脚本，用作应用的初始化工作。在这些初始代码中，会按照顺序执行其中的同步代码。而在这些同步代码执行的过程中，会陆陆续续监听一些事件或者注册一些异步API（网络相关，IO相关，等等…）的回调，这些事件处理程序和回调就是异步任务，异步任务会进入任务队列，并且在接下来的<strong>Event Loop</strong>中被处理。</p>
+<p>异步任务又分为<strong>Task</strong>和<strong>Microtask</strong>，各自有单独的数据结构和内存来维护。</p>
+<p>用一个简单的例子来感受下：</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">var</span> a = <span class="hljs-number">1</span>;</span><br><span class="line"><span class="hljs-built_in">console</span>.log(<span class="hljs-string">'a:'</span>, a)</span><br><span class="line"><span class="hljs-keyword">var</span> b = <span class="hljs-number">2</span>;</span><br><span class="line"><span class="hljs-built_in">console</span>.log(<span class="hljs-string">'b:'</span>, b)</span><br><span class="line">setTimeout(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">task1</span>(<span class="hljs-params"></span>)</span>&#123;</span><br><span class="line">  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'task1:'</span>, <span class="hljs-number">5</span>)</span><br><span class="line">  <span class="hljs-built_in">Promise</span>.resolve(<span class="hljs-number">6</span>).then(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">microtask2</span>(<span class="hljs-params">res</span>)</span>&#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'microtask2:'</span>, res)</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;, <span class="hljs-number">0</span>)</span><br><span class="line"><span class="hljs-built_in">Promise</span>.resolve(<span class="hljs-number">4</span>).then(<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">microtask1</span>(<span class="hljs-params">res</span>)</span>&#123;</span><br><span class="line">  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'microtask1:'</span>, res)</span><br><span class="line">&#125;)</span><br><span class="line"><span class="hljs-keyword">var</span> b = <span class="hljs-number">3</span>;</span><br><span class="line"><span class="hljs-built_in">console</span>.log(<span class="hljs-string">'c:'</span>, c)</span><br></pre></td></tr></table></figure>
+
+<p>以上代码执行后，依次在控制台输出：</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a: <span class="hljs-number">1</span></span><br><span class="line">b: <span class="hljs-number">2</span></span><br><span class="line">c: <span class="hljs-number">3</span></span><br><span class="line">microtask1: <span class="hljs-number">4</span></span><br><span class="line">task1: <span class="hljs-number">5</span></span><br><span class="line">microtask2: <span class="hljs-number">6</span></span><br></pre></td></tr></table></figure>
+
+<p>仔细一看也没什么难的，但是这背后发生的细节，还是有必要探究下。我们不妨先问自己几个问题，一起来看下吧。</p>
+<h2 id="Task和Microtask都有哪些？"><a href="#Task和Microtask都有哪些？" class="headerlink" title="Task和Microtask都有哪些？"></a>Task和Microtask都有哪些？</h2><ul>
+<li>Tasks：<ul>
+<li><code>setTimeout</code></li>
+<li><code>setInterval</code></li>
+<li><code>MessageChannel</code></li>
+<li>I/0（文件，网络）相关API</li>
+<li>DOM事件监听：浏览器环境</li>
+<li><code>setImmediate</code>：Node环境，IE好像也支持（见caniuse数据）</li>
+</ul>
+</li>
+<li>Microtasks:<ul>
+<li><code>requestAnimationFrame</code>：浏览器环境</li>
+<li><code>MutationObserver</code>：浏览器环境</li>
+<li><code>Promise.prototype.then</code>, <code>Promise.prototype.catch</code>, <code>Promise.prototype.finally</code></li>
+<li><code>process.nextTick</code>：Node环境</li>
+<li><code>queueMicrotask</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="requestAnimationFrame是不是微任务？"><a href="#requestAnimationFrame是不是微任务？" class="headerlink" title="requestAnimationFrame是不是微任务？"></a>requestAnimationFrame是不是微任务？</h2><p><code>requestAnimationFrame</code>简称<code>rAF</code>，经常被我们用来做动画效果，因为其回调函数执行频率与浏览器屏幕刷新频率保持一致，也就是我们通常说的<strong>它能实现60FPS的效果</strong>。在<code>rAF</code>被大范围应用前，我们经常使用<code>setTimeout</code>来处理动画。但是<code>setTimeout</code>在主线程繁忙时，不一定能及时地被调度，从而出现卡顿现象。</p>
+<p>那么<code>rAF</code>属于宏任务或者微任务吗？其实很多网站都没有给出定义，包括MDN上也描述得非常简单。</p>
+<p>我们不妨自己问问自己，<code>rAF</code>是宏任务吗？我想了一下，显然不是，<code>rAF</code>可以用来代替定时器动画，怎么能和定时器任务一样被Event Loop调度呢？</p>
+<p>我又问了问自己，<code>rAF</code>是微任务吗？<code>rAF</code>的调用时机是在下一次浏览器重绘之前，这看起来和微任务的调用时机差不多，曾让我一度认为<code>rAF</code>是微任务，而实际上<code>rAF</code>也不是微任务。为什么这么说呢？请运行下这段代码。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">recursionRaf</span>(<span class="hljs-params"></span>) </span>&#123;</span><br><span class="line">	requestAnimationFrame(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'raf回调'</span>)</span><br><span class="line">        recursionRaf()</span><br><span class="line">    &#125;)</span><br><span class="line">&#125;</span><br><span class="line">recursionRaf();</span><br></pre></td></tr></table></figure>
+
+<p>你会发现，在无限递归的情况下，<code>rAF</code>回调正常执行，浏览器也可正常交互，没有出现阻塞的现象。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/raf%E4%B8%8D%E9%98%BB%E5%A1%9E.gif" alt="递归rAF并没有阻塞"></p>
+<p>而如果<code>rAF</code>是微任务的话，则不会有这种待遇。不信你可以翻到后面一节内容「<strong>如果Microtask执行时又创建了Microtask，怎么处理？</strong>」。</p>
+<p>所以，<code>rAF</code>的任务级别是很高的，拥有单独的队列维护。在浏览器1帧的周期内，<code>rAF</code>与Javascript执行，浏览器重绘是同一个Level的。（其实，大家在前面那张「<strong>解剖1帧</strong>」的图中也能看出来了。）</p>
+<h2 id="Task和Microtask各有1个队列？"><a href="#Task和Microtask各有1个队列？" class="headerlink" title="Task和Microtask各有1个队列？"></a>Task和Microtask各有1个队列？</h2><p>最初，我认为既然浏览器区分了Task和Microtask，那就只要各自安排一个队列存储任务即可。事实上，Task根据task source的不同，安排了独立的队列。比如Dom事件属于Task，但是Dom事件有很多种类型，为了方便user agent细分Task并精细化地安排各种不同类型Task的处理优先级，甚至做一些优化工作，必须有一个task source来区分。同理，Microtask也有自己的microtask task source。</p>
+<p>具体解释见HTML标准中的一段话：</p>
+<blockquote>
+<p>Essentially, <strong>task sources</strong> <em>are used within standards to separate logically-different types of tasks, which a user agent might wish to distinguish between.</em> Task queues *are used by user agents to coalesce task sources within a given event loop。</p>
+</blockquote>
+<h2 id="Task和Microtask的消费机制是怎样的？"><a href="#Task和Microtask的消费机制是怎样的？" class="headerlink" title="Task和Microtask的消费机制是怎样的？"></a>Task和Microtask的消费机制是怎样的？</h2><blockquote>
+<p>An event loop has one or more task queues. A task queue is <strong>a set of tasks</strong>.</p>
+</blockquote>
+<p>javascript是<strong>事件驱动</strong>的，所以Event Loop是<strong>异步任务调度</strong>的核心。虽然我们一直说<strong>任务队列</strong>，但是Tasks在数据结构上不是队列（Queue），而是<strong>集合（Set）</strong>。在每一轮Event Loop中，会取出第一个<strong>runnable</strong>的Task（第一个可执行的Task，并不一定是顺序上的第一个Task）进入Main Thread执行，然后再检查Microtask队列并执行队列中所有Microtask。</p>
+<p>说再多，都不如一张图直观，请看！</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/eventloop.jpg" alt="event loop"></p>
+<h2 id="Task和Microtask什么时候进入相应队列"><a href="#Task和Microtask什么时候进入相应队列" class="headerlink" title="Task和Microtask什么时候进入相应队列?"></a>Task和Microtask什么时候进入相应队列?</h2><p>回过头来看，我们一直在提这个概念“<strong>异步任务进入队列</strong>”，那么就有个疑问，Task和Microtask到底是什么时候进入相应的队列？我们重新来捋捋。异步任务有<strong>注册</strong>，<strong>进队列</strong>，<strong>回调被执行</strong>这三个关键行为。注册很好理解，代表这个任务被创建了；而回调被执行则代表着这个任务已经被主线程捞起并执行了。但是，在<strong>进队列</strong>这一行为上，宏任务和微任务的表现是不一样的。</p>
+<h3 id="宏任务进队列"><a href="#宏任务进队列" class="headerlink" title="宏任务进队列"></a>宏任务进队列</h3><p>对于Task而言，任务注册时就会进入队列，只是任务的状态还不是<strong>runnable</strong>，不具备被Event Loop捞起的条件。</p>
+<p>我们先用Dom事件为例举个例子。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">document</span>.body.addEventListener(<span class="hljs-string">'click'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">e</span>) </span>&#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'被点击了'</span>, e)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>当<code>addEventListener</code>这行代码被执行时，任务就注册了，代表有一个用户点击事件相关的Task进入任务队列。那么这个宏任务什么时候才变成<strong>runnable</strong>呢？当然是用户点击发生并且信号传递到浏览器Render Process的Main Thread后，此时宏任务变成<strong>runnable</strong>状态，才可以被<strong>Event Loop</strong>捞起，进入<strong>Main Thread</strong>执行。</p>
+<p>这里再举个例子，顺便解释下为什么<code>setTimeout 0</code>会有延迟。</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(function() &#123;</span><br><span class="line">	console.log(&apos;我是setTimeout注册的宏任务&apos;)</span><br><span class="line">&#125;, 0)</span><br></pre></td></tr></table></figure>
+
+<p>执行<code>setTimeout</code>这行代码时，相应的宏任务就被注册了，并且Main Thread会告知定时器线程，“你定时0毫秒后给我一个消息”。定时器线程收到消息，发现只要等待0毫秒，立马就给Main Thread一个消息，“我这边已经过了0毫秒了”。Main Thread收到这个回复消息后，就把相应宏任务的状态置为runnable，这个宏任务就可以被Event Loop捞起了。</p>
+<p>可以看到，经过这样一个线程间通信的过程，即便是延时0毫秒的定时器，其回调也并不是在真正意义上的0毫秒之后执行，因为通信过程就需要耗费时间。网上有个观点说<code>setTimeout 0</code>的响应时间最少是4ms，其实也是有依据的，不过也是有条件的。</p>
+<blockquote>
+<p>HTML Living Standard: <strong>If nesting level is greater than 5, and timeout is less than 4</strong>, then set timeout to 4.</p>
+</blockquote>
+<p>对于这种说法，我觉得自己有个概念就行，不同浏览器在实现规范的细节上肯定不一样，具体通信过程也不详，是不是4ms也不好说，关键是你有没有搞清楚这背后经历了什么。</p>
+<h3 id="微任务进队列"><a href="#微任务进队列" class="headerlink" title="微任务进队列"></a>微任务进队列</h3><p>前面我们提到一个观点，<strong>执行完一个Task后，如果Microtask队列不为空，会把Microtask队列中所有的Microtask都取出来执行</strong>。我认为，Microtask不是在注册时就进入Microtask队列，因为Event Loop处理Microtask队列时，并不会判断Microtask的状态。反过来想，如果Microtask在注册时就进入Microtask队列，就会存在Microtask还未变为<strong>runnable</strong>状态就被执行的情况，这显然是不合理的。我的观点是，Microtask在变为<strong>runnable</strong>状态时才进入Microtask队列。</p>
+<p>那么我们来分析下Microtask什么时候变成<strong>runnable</strong>状态，首先来看看Promise。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">var</span> promise1 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">    resolve(<span class="hljs-number">1</span>);</span><br><span class="line">&#125;)</span><br><span class="line">promise1.then(<span class="hljs-function"><span class="hljs-params">res</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'promise1微任务被执行了'</span>)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>读者们，我的第一个问题是，Promise的微任务什么时候被注册？<code>new Promise</code>的时候？还是什么时候？不妨来猜一猜！</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/%E4%BD%A0%E7%8C%9C%E6%88%91%E7%8C%9C%E4%B8%8D%E7%8C%9C.jpg" alt></p>
+<p>答案是<code>.then</code>被执行的时候。（当然，还有<code>.catch</code>的情况，这里只是就这个例子说）。</p>
+<p>那么Promise微任务的状态什么时候变成<strong>runnable</strong>呢？相信不少读者已经有了头绪了，没错，就是<strong>Promise状态发生转移</strong>的时候，在本例中也就是<code>resolve(1)</code>被执行的时候，<strong>Promise状态由pending转移为fulfilled</strong>。在<code>resolve(1)</code>执行后，这个Promise微任务就进入Microtask队列了，并且将在本次Event Loop中被执行。</p>
+<p>基于这个例子，我们再来加深下难度。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">var</span> promise1 = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">    setTimeout(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">        resolve(<span class="hljs-number">1</span>);</span><br><span class="line">    &#125;, <span class="hljs-number">0</span>);</span><br><span class="line">&#125;);</span><br><span class="line">promise1.then(<span class="hljs-function"><span class="hljs-params">res</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'promise1微任务被执行了'</span>);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>在这个例子中，Promise微任务的<strong>注册</strong>和<strong>进队列</strong>并不在同一次Event Loop。怎么说呢？在第一个Event Loop中，通过<code>.then</code>注册了微任务，但是我们可以发现，<code>new Promise</code>时，执行了一个<code>setTimeout</code>，这是相当于注册了一个宏任务。而<code>resolve(1)</code>必须在宏任务被执行时才会执行。很明显，两者中间隔了<strong>至少</strong>一次Event Loop。</p>
+<p>如果能分析Promise微任务的过程，你自然就知道怎么分析ObserverMutation微任务的过程了，这里不再赘述。</p>
+<h2 id="如果Microtask执行时又创建了Microtask，怎么处理？"><a href="#如果Microtask执行时又创建了Microtask，怎么处理？" class="headerlink" title="如果Microtask执行时又创建了Microtask，怎么处理？"></a>如果Microtask执行时又创建了Microtask，怎么处理？</h2><p>我们知道，一次Event Loop最多只执行一个runnable的Task，但是会执行Microtask队列中的所有Microtask。如果在执行Microtask时，又创建了新的Microtask，这个新的Microtask是在下次Event Loop中被执行吗？答案是否定的。微任务可以添加新的微任务到队列中，并在下一个任务开始执行之前且当前Event Loop结束之前执行完所有的微任务。请注意不要递归地创建微任务，否则会陷入死循环。</p>
+<p>下面就是一个糟糕的示例。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">// bad case</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">recursionMicrotask</span>(<span class="hljs-params"></span>) </span>&#123;</span><br><span class="line">	<span class="hljs-built_in">Promise</span>.resolve().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">		recursionMicrotask()</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;</span><br><span class="line">recursionMicrotask();</span><br></pre></td></tr></table></figure>
+
+<p>请不要轻易尝试，否则页面会卡死哦！（因为Microtask占着Main Thread不释放，浏览器渲染都没办法进行了）</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/%E5%95%8A.gif" alt></p>
+<h2 id="为什么要区分Task和Microtask？"><a href="#为什么要区分Task和Microtask？" class="headerlink" title="为什么要区分Task和Microtask？"></a>为什么要区分Task和Microtask？</h2><p>这是一个非常重要的问题。为什么不在执行完Task后，直接进行浏览器渲染这一步骤，而要再加上执行Microtask这一步呢？其实在前面的问题中已经解答过了。一次Event Loop只会消费一个宏任务，而微任务队列在被消费时有“<strong>继续上车</strong>”的机制，这就让开发者有了更多的想象力，对代码的控制力会更强。</p>
+<h1 id="做几道题热热身？"><a href="#做几道题热热身？" class="headerlink" title="做几道题热热身？"></a>做几道题热热身？</h1><p>在冲击Promise/A+规范前，不妨先用几个习题来测试下自己对Promise的理解程度。</p>
+<h2 id="基本操作"><a href="#基本操作" class="headerlink" title="基本操作"></a>基本操作</h2><figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">mutationCallback</span>(<span class="hljs-params">mutationRecords, observer</span>) </span>&#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'mt1'</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-keyword">const</span> observer = <span class="hljs-keyword">new</span> MutationObserver(mutationCallback)</span><br><span class="line">observer.observe(<span class="hljs-built_in">document</span>.body, &#123; <span class="hljs-attr">attributes</span>: <span class="hljs-literal">true</span> &#125;)</span><br><span class="line"></span><br><span class="line"><span class="hljs-built_in">Promise</span>.resolve().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'mt2'</span>)</span><br><span class="line">    setTimeout(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'t1'</span>)</span><br><span class="line">    &#125;, <span class="hljs-number">0</span>)</span><br><span class="line">    <span class="hljs-built_in">document</span>.body.setAttribute(<span class="hljs-string">'test'</span>, <span class="hljs-string">"a"</span>)</span><br><span class="line">&#125;).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'mt3'</span>)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">setTimeout(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'t2'</span>)</span><br><span class="line">&#125;, <span class="hljs-number">0</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这道题就不分析了，答案：<strong>mt2 mt1 mt3 t2 t1</strong></p>
+<h2 id="浏览器不讲武德？"><a href="#浏览器不讲武德？" class="headerlink" title="浏览器不讲武德？"></a>浏览器不讲武德？</h2><figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-built_in">Promise</span>.resolve().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">0</span>);</span><br><span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-built_in">Promise</span>.resolve(<span class="hljs-number">4</span>);</span><br><span class="line">&#125;).then(<span class="hljs-function">(<span class="hljs-params">res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(res)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="hljs-built_in">Promise</span>.resolve().then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">1</span>);</span><br><span class="line">&#125;).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">2</span>);</span><br><span class="line">&#125;).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">3</span>);</span><br><span class="line">&#125;).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">5</span>);</span><br><span class="line">&#125;).then(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span>&#123;</span><br><span class="line">    <span class="hljs-built_in">console</span>.log(<span class="hljs-number">6</span>);</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>这道题据说是字节内部流出的一道题，说实话我刚看到的时候也是一头雾水。经过我在Chrome测试，得到的答案确实很有规律，就是：<strong>0 1 2 3 4 5 6</strong>。</p>
+<p>先输出0，再输出1，我还能理解，为什么输出2和3后又突然跳到4呢，浏览器你不讲武德啊！</p>
+<p>emm…我被戴上了痛苦面具！</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/%E7%97%9B%E8%8B%A6%E9%9D%A2%E5%85%B7.png" alt></p>
+<p>那么这背后的执行顺序到底是怎样的呢？仔细分析下，你会发现还是有迹可循的。</p>
+<p>老规矩，第一个问题，这道题的代码执行过程中，产生了多少个微任务？可能很多人认为是7个，但实际上应该是8个。</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>注册时机</th>
+<th>异步回调</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mt1</td>
+<td>.then()</td>
+<td>console.log(0);return Promise.resolve(4);</td>
+</tr>
+<tr>
+<td>mt2</td>
+<td>.then(res)</td>
+<td>console.log(res)</td>
+</tr>
+<tr>
+<td>mt3</td>
+<td>.then()</td>
+<td>console.log(1);</td>
+</tr>
+<tr>
+<td>mt4</td>
+<td>.then()</td>
+<td>console.log(2);</td>
+</tr>
+<tr>
+<td>mt5</td>
+<td>.then()</td>
+<td>console.log(3);</td>
+</tr>
+<tr>
+<td>mt6</td>
+<td>.then()</td>
+<td>console.log(5);</td>
+</tr>
+<tr>
+<td>mt7</td>
+<td>.then()</td>
+<td>console.log(6);</td>
+</tr>
+<tr>
+<td>mt8</td>
+<td><code>return Promise.resolve(4)</code>执行并且execution context stack清空后，隐式注册</td>
+<td>隐式回调（未体现在代码中），目的是让mt2变成runnable状态</td>
+</tr>
+</tbody></table>
+<ul>
+<li>同步任务执行，注册mt1~mt7七个微任务，此时execution context stack为空，并且mt1和mt3的状态变为runnable。JS引擎安排mt1和mt3进入Microtask队列（通过<strong>HostEnqueuePromiseJob</strong>实现）。</li>
+<li><strong>Perform a microtask checkpoint</strong>，由于mt1和mt3是在同一次JS call中变为runnable的，所以mt1和mt3的回调先后进入execution context stack执行。</li>
+<li>mt1回调进入execution context stack执行，<strong>输出0</strong>，返回<code>Promise.resolve(4)</code>。mt1出队列。由于mt1回调返回的是一个状态为fulfilled的Promise，所以之后JS引擎会安排一个job（job是ecma中的概念，等同于微任务的概念，这里先给它编号mt8），其回调目的是让mt2的状态变为fulfilled（<strong>前提是当前execution context stack is empty</strong>）。所以紧接着还是先执行mt3的回调。</li>
+<li>mt3回调进入execution context stack执行，<strong>输出1</strong>，mt4变为runnable状态，execution context stack is empty，mt3出队列。</li>
+<li>由于此时mt4已经是runnable状态，JS引擎安排mt4进队列，接着JS引擎会安排mt8进队列。</li>
+<li>接着，mt4回调进入execution context stack执行，<strong>输出2</strong>，mt5变为runnable，mt4出队列。JS引擎安排mt5进入Microtask队列。</li>
+<li>mt8回调执行，目的是让mt2变成runnable状态，mt8出队列。mt2进队列。</li>
+<li>mt5回调执行，<strong>输出3</strong>，mt6变为runnable，mt5出队列。mt6进队列。</li>
+<li>mt2回调执行，<strong>输出4</strong>，mt2出队列。</li>
+<li>mt6回调执行，<strong>输出5</strong>，mt7变为runnable，mt6出队列。mt7进队列。</li>
+<li>mt7回调执行，<strong>输出6</strong>，mt7出队列。执行完毕！总体来看，输出结果依次为：<strong>0 1 2 3 4 5 6</strong>。</li>
+</ul>
+<p>对这块执行过程尚有疑问的朋友，可以先往下看看Promise/A+规范和ECMAScript262规范中关于Promise的约定，再回过头来思考，也欢迎留言与我交流！</p>
+<p>经过我在Edge浏览器测试，结果是：<strong>0 1 2 4 3 5 6</strong>。可以看到，不同浏览器在实现Promise的主流程上是吻合的，但是在一些细枝末节上还有不一致的地方。实际应用中，我们只要注意规避这种问题即可。</p>
+<h1 id="实现Promise-A"><a href="#实现Promise-A" class="headerlink" title="实现Promise/A+"></a>实现Promise/A+</h1><p>热身完毕，接下来就是直面大boss <a href="https://promisesaplus.com/" title="Promise/A+规范" target="_blank" rel="noopener">Promise/A+规范</a>。Promise/A+规范列举了大大小小三十余条细则，一眼看过去还是挺晕的。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/promiseaplus.png" alt="Promise/A+"></p>
+<p>仔细阅读多遍规范之后，我有了一个基本认识，要实现Promise/A+规范，关键是要理清其中几个核心点。</p>
+<h2 id="关系链路"><a href="#关系链路" class="headerlink" title="关系链路"></a>关系链路</h2><p>本来写了大几千字有点觉得疲倦了，于是想着最后这部分就用文字讲解快速收尾，但是最后这节写到一半时，我觉得我写不下去了，纯文字的东西太干了，干得没法吸收，这对那些对Promise掌握程度不够的读者来说是相当不友好的。所以，我觉得还是先用一张图来描述一下Promise的关系链路。</p>
+<p>首先，Promise它是一个对象，而Promise/A+规范则是围绕着Promise的原型方法<code>.then()</code>展开的。</p>
+<ul>
+<li><code>.then()</code>的特殊性在于，它会返回一个新的Promise实例，在这种连续调用<code>.then()</code>的情况下，就会串起一个Promise链，这与原型链又有一些相似之处。“恬不知耻”地再推荐一篇<a href="https://juejin.cn/post/6844904194097299463" title="「思维导图学前端 」6k字一文搞懂Javascript对象，原型，继承" target="_blank" rel="noopener">「思维导图学前端 」6k字一文搞懂Javascript对象，原型，继承</a>，哈哈哈。</li>
+<li>另一个灵活的地方在于，<code>p1.then(onFulfilled, onRejected)</code>返回的新Promise实例p2，其状态转移的发生是在p1的状态转移发生之后（这里的<strong>之后</strong>指的是异步的之后）。并且，p2的状态转移为Fulfilled还是Rejected，这一点取决于<code>onFulfilled</code>或<code>onRejected</code>的返回值，这里有一个较为复杂的分析过程，也就是后面所述的Promise Resolution Procedure算法。</li>
+</ul>
+<p>我这里画了一个简单的时序图，画图水平很差，只是为了让读者们先有个基本印象。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/promise%E6%97%B6%E5%BA%8F1.png" alt></p>
+<p>其中还有很多细节是没提到的（因为细节真的太多了，全部画出来就相当复杂，具体过程请看我文末附的源码）。</p>
+<h2 id="nextTick"><a href="#nextTick" class="headerlink" title="nextTick"></a>nextTick</h2><p>看了前面内容，相信大家都有一个概念，微任务是一个异步任务，而我们要实现Promise的整套异步机制，必然要具备模拟微任务异步回调的能力。在规范中也提到了这么一条信息：</p>
+<blockquote>
+<p>This can be implemented with <strong>either a “macro-task”</strong> mechanism such as setTimeout or setImmediate, <strong>or with a “micro-task”</strong> mechanism such as <strong>MutationObserver</strong> or <strong>process.nextTick</strong>. </p>
+</blockquote>
+<p>我这里选择的是用微任务来实现异步回调，如果用宏任务来实现异步回调，那么在Promise微任务队列执行过程中就可能会穿插宏任务，这就不太符合微任务队列的调度逻辑了。这里还对Node环境和浏览器环境做了兼容，Node环境中可以使用<code>process.nextTick</code>回调来模拟微任务的执行，而在浏览器环境中我们可以选择<code>MutationObserver</code>。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">nextTick</span>(<span class="hljs-params">callback</span>) </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> process !== <span class="hljs-string">'undefined'</span> &amp;&amp; <span class="hljs-keyword">typeof</span> process.nextTick === <span class="hljs-string">'function'</span>) &#123;</span><br><span class="line">    process.nextTick(callback)</span><br><span class="line">  &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">    <span class="hljs-keyword">const</span> observer = <span class="hljs-keyword">new</span> MutationObserver(callback)</span><br><span class="line">    <span class="hljs-keyword">const</span> textNode = <span class="hljs-built_in">document</span>.createTextNode(<span class="hljs-string">'1'</span>)</span><br><span class="line">    observer.observe(textNode, &#123;</span><br><span class="line">      characterData: <span class="hljs-literal">true</span></span><br><span class="line">    &#125;)</span><br><span class="line">    textNode.data = <span class="hljs-string">'2'</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="状态转移"><a href="#状态转移" class="headerlink" title="状态转移"></a>状态转移</h2><ul>
+<li><p>Promise实例一共有三种状态，分别是Pending, Fulfilled, Rejected，初始状态是Pending。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">const</span> PROMISE_STATES = &#123;</span><br><span class="line">  PENDING: <span class="hljs-string">'pending'</span>,</span><br><span class="line">  FULFILLED: <span class="hljs-string">'fulfilled'</span>,</span><br><span class="line">  REJECTED: <span class="hljs-string">'rejected'</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MyPromise</span> </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">constructor</span>(executor) &#123;</span><br><span class="line">    <span class="hljs-keyword">this</span>.state = PROMISE_STATES.PENDING;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="hljs-comment">// ...其他代码</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>一旦Promise的状态发生转移，就不可再转移为其他状态。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment"> * 封装Promise状态转移的过程</span></span><br><span class="line"><span class="hljs-comment"> * @param &#123;MyPromise&#125; promise 发生状态转移的Promise实例</span></span><br><span class="line"><span class="hljs-comment"> * @param &#123;*&#125; targetState 目标状态</span></span><br><span class="line"><span class="hljs-comment"> * @param &#123;*&#125; value 伴随状态转移的值，可能是fulfilled的值，也可能是rejected的原因</span></span><br><span class="line"><span class="hljs-comment"> */</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">transition</span>(<span class="hljs-params">promise, targetState, value</span>) </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">if</span> (promise.state === PROMISE_STATES.PENDING &amp;&amp; targetState !== PROMISE_STATES.PENDING) &#123;</span><br><span class="line">    <span class="hljs-comment">// 2.1: state只能由pending转为其他态，状态转移后，state和value的值不再变化</span></span><br><span class="line">    <span class="hljs-built_in">Object</span>.defineProperty(promise, <span class="hljs-string">'state'</span>, &#123;</span><br><span class="line">      configurable: <span class="hljs-literal">false</span>,</span><br><span class="line">      writable: <span class="hljs-literal">false</span>,</span><br><span class="line">      enumerable: <span class="hljs-literal">true</span>,</span><br><span class="line">      value: targetState</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="hljs-comment">// ...其他代码</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>触发状态转移是靠调用<code>resolve()</code>或<code>reject()</code>实现的。当<code>resolve()</code>被调用时，当前Promise也不一定会立即变为Fulfilled状态，因为传入<code>resolve(value)</code>方法的value有可能也是一个Promise，这个时候，当前Promise必须追踪传入的这个Promise的状态，整个确定Promise状态的过程是通过<strong>Promise Resolution Procedure算法</strong>实现的，具体细节封装到了下面代码中的<code>resolvePromiseWithValue</code>函数中。当<code>reject()</code>被调用时，当前Promise的状态就是确定的，一定是Rejected，此时可以通过<code>transition</code>函数（封装了状态转移的细节）将Promise的状态进行转移，并执行后续动作。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">// resolve的执行，是一个触发信号，基于此进行下一步的操作</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">resolve</span>(<span class="hljs-params">value</span>) </span>&#123;</span><br><span class="line">  resolvePromiseWithValue(<span class="hljs-keyword">this</span>, value)</span><br><span class="line">&#125;</span><br><span class="line"><span class="hljs-comment">// reject的执行，是状态可以变为Rejected的信号</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">reject</span>(<span class="hljs-params">reason</span>) </span>&#123;</span><br><span class="line">  transition(<span class="hljs-keyword">this</span>, PROMISE_STATES.REJECTED, reason)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">MyPromise</span> </span>&#123;</span><br><span class="line">  <span class="hljs-keyword">constructor</span>(executor) &#123;</span><br><span class="line">    <span class="hljs-keyword">this</span>.state = PROMISE_STATES.PENDING;</span><br><span class="line">    <span class="hljs-keyword">this</span>.fulfillQueue = [];</span><br><span class="line">    <span class="hljs-keyword">this</span>.rejectQueue = [];</span><br><span class="line">    <span class="hljs-comment">// 构造Promise实例后，立刻调用executor</span></span><br><span class="line">    executor(resolve.bind(<span class="hljs-keyword">this</span>), reject.bind(<span class="hljs-keyword">this</span>))</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="链式追踪"><a href="#链式追踪" class="headerlink" title="链式追踪"></a>链式追踪</h2><p>假设现在有一个Promise实例，我们称之为p1。由于<code>promise1.then(onFulfilled, onRejected)</code>会返回一个新的Promise（我们称之为p2），与此同时，也会注册一个微任务mt1，这个新的p2会追踪其关联的p1的状态变化。</p>
+<p>当p1的状态发生转移时，微任务mt1回调会在接下来被执行，如果状态是Fulfilled，则<code>onFulfilled</code>会被执行，否则<code>onRejected</code>会被执行。微任务mt回调1执行的结果将作为决定p2状态的依据。以下是Fulfilled情况下的部分关键代码，其中promise指的是p1，而chainedPromise指的是p2。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment">// 回调应异步执行，所以用到了nextTick</span></span><br><span class="line">nextTick(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="hljs-comment">// then可能会被调用多次，所以异步回调应该用数组来维护</span></span><br><span class="line">  promise.fulfillQueue.forEach(<span class="hljs-function">(<span class="hljs-params">&#123; handler, chainedPromise &#125;</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">      <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> handler === <span class="hljs-string">'function'</span>) &#123;</span><br><span class="line">        <span class="hljs-keyword">const</span> adoptedValue = handler(value)</span><br><span class="line">        <span class="hljs-comment">// 异步回调返回的值将决定衍生的Promise的状态</span></span><br><span class="line">        resolvePromiseWithValue(chainedPromise, adoptedValue)</span><br><span class="line">      &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">        <span class="hljs-comment">// 存在调用了then，但是没传回调作为参数的可能，此时衍生的Promise的状态直接采纳其关联的Promise的状态。</span></span><br><span class="line">        transition(chainedPromise, PROMISE_STATES.FULFILLED, promise.value)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="hljs-keyword">catch</span> (error) &#123;</span><br><span class="line">      <span class="hljs-comment">// 如果回调抛出了异常，此时直接将衍生的Promise的状态转移为rejected，并用异常error作为reason</span></span><br><span class="line">      transition(chainedPromise, PROMISE_STATES.REJECTED, error)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;)</span><br><span class="line">  <span class="hljs-comment">// 最后清空该Promise关联的回调队列</span></span><br><span class="line">  promise.fulfillQueue = [];</span><br><span class="line">&#125;）</span><br></pre></td></tr></table></figure>
+
+<h2 id="Promise-Resolution-Procedure算法"><a href="#Promise-Resolution-Procedure算法" class="headerlink" title="Promise Resolution Procedure算法"></a>Promise Resolution Procedure算法</h2><p>Promise Resolution Procedure算法是一种抽象的执行过程，它的语法形式是<code>[[Resolve]](promise, x &quot;[Resolve]&quot;)</code>，接受的参数是一个Promise实例和一个值x，通过值x的可能性，来决定这个Promise实例的状态走向。如果直接硬看规范，会有点吃力，这里直接说人话解释一些细节。</p>
+<h3 id="2-3-1"><a href="#2-3-1" class="headerlink" title="2.3.1"></a>2.3.1</h3><p>如果promise和值x引用同一个对象，应该直接将promise的状态置为Rejected，并且用一个TypeError作为reject的原因。</p>
+<blockquote>
+<p>If <code>promise</code> and <code>x</code> refer to the same object, reject <code>promise</code> with a <code>TypeError</code> as the reason.</p>
+</blockquote>
+<p>【说人话】举个例子，老板说只要今年业绩超过10亿，业绩就超过10亿。这显然是个病句，你不能拿预期本身作为条件。正确的玩法是，老板说只要今年业绩超过10亿，就发1000万奖金（嘿嘿，这种事期待一下就好了）。</p>
+<p>代码实现：</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">if</span> (promise === x) &#123;</span><br><span class="line">    <span class="hljs-comment">// 2.3.1 由于Promise采纳状态的机制，这里必须进行全等判断，防止出现死循环</span></span><br><span class="line">    transition(promise, PROMISE_STATES.REJECTED, <span class="hljs-keyword">new</span> <span class="hljs-built_in">TypeError</span>(<span class="hljs-string">'promise and x cannot refer to a same object.'</span>))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-2"><a href="#2-3-2" class="headerlink" title="2.3.2"></a>2.3.2</h3><p>如果x是一个Promise实例，promise应该采纳x的状态。</p>
+<blockquote>
+<p>2.3.2 If <code>x</code> is a promise, adopt its state [3.4]:</p>
+<pre><code>2.3.2.1 If `x` is pending, `promise` must remain pending until `x` is fulfilled or rejected.
+
+2.3.2.2 If/when `x` is fulfilled, fulfill `promise` with the same value.
+
+2.3.2.3 If/when `x` is rejected, reject `promise` with the same reason.</code></pre></blockquote>
+<p>【说人话】小王问领导：“今年会发年终奖吗？发多少？”领导听了心里想，“这个事我之前也在打听，不过还没定下来，<strong>得看老板的意思</strong>。”，于是领导对小王说：“会发的，不过要等消息！”。</p>
+<p>注意，这个时候，领导对小王许下了承诺，但是这个承诺p2的状态还是pending，需要看老板给的承诺p1的状态。</p>
+<ul>
+<li><strong>可能性1</strong>：过了几天，老板对领导说：“今年业务做得可以，年终奖发1000万”。这里相当于p1已经是fulfilled状态了，value是1000万。领导拿了这个准信了，自然可以跟小王兑现承诺p2了，于是对小王说：“年终奖可以下来了，是1000万！”。这时，承诺p2的状态就是fulfilled了，value也是1000万。小王这个时候就“<strong>别墅靠海</strong>”了。</li>
+</ul>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/20160316109270_gYDBhJ.jpg" alt></p>
+<ul>
+<li><strong>可能性2</strong>：过了几天，老板有点发愁，对领导说：“今年业绩不太行啊，年终奖就不发了吧，明年，咱们明年多发点。”显然，这里p1就是rejected了，领导一看这情况不对啊，但也没办法，只能对小王说：“小王啊，今年公司情况特殊，年终奖就不发了。”这p2也随之rejected了，小王内心有点炸裂……</li>
+</ul>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/%E4%BD%A0%E7%9F%A5%E9%81%93%E6%88%91%E4%BB%8A%E5%B9%B4%E6%80%8E%E4%B9%88%E8%BF%87%E7%9A%84%E5%90%97.gif" alt></p>
+<p>注意，Promise /A+规范2.3.2小节这里有两个大的方向，一个是x的状态未定，一个是x的状态已定。在代码实现上，这里有个技巧，对于状态未定的情况，必须用订阅的方式来实现，而.then就是订阅的绝佳途径。</p>
+<figure class="highlight javascript hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (isPromise(x)) &#123;</span><br><span class="line">    <span class="hljs-comment">// 2.3.2 如果x是一个Promise实例，则追踪并采纳其状态</span></span><br><span class="line">    <span class="hljs-keyword">if</span> (x.state !== PROMISE_STATES.PENDING) &#123;</span><br><span class="line">      <span class="hljs-comment">// 假设x的状态已经发生转移，则直接采纳其状态</span></span><br><span class="line">      transition(promise, x.state, x.state === PROMISE_STATES.FULFILLED ? x.value : x.reason)</span><br><span class="line">    &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">      <span class="hljs-comment">// 假设x的状态还是pending，则只需等待x状态确定后再进行promise的状态转移</span></span><br><span class="line">      <span class="hljs-comment">// 而x的状态转移结果是不定的，所以两种情况我们都需要进行订阅</span></span><br><span class="line">      <span class="hljs-comment">// 这里用一个.then很巧妙地完成了订阅动作</span></span><br><span class="line">      x.then(<span class="hljs-function"><span class="hljs-params">value</span> =&gt;</span> &#123;</span><br><span class="line">        <span class="hljs-comment">// x状态转移为fulfilled，由于callback传过来的value是不确定的类型，所以需要继续应用Promise Resolution Procedure算法</span></span><br><span class="line">        resolvePromiseWithValue(promise, value, thenableValues)</span><br><span class="line">      &#125;, reason =&gt; &#123;</span><br><span class="line">        <span class="hljs-comment">// x状态转移为rejected</span></span><br><span class="line">        transition(promise, PROMISE_STATES.REJECTED, reason)</span><br><span class="line">      &#125;)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>多的细节咱这篇文章就不一一分析了，写着写着快1万字了，就先结束掉吧，感兴趣的读者可以直接打开源码看（往下看）。</p>
+<p>这是跑测试用例的效果图，可以看到，872个case是全部通过的。</p>
+<p><img src=""data-src="https://qncdn.wbjiang.cn/promiseaplus.gif" alt></p>
+<h2 id="完整代码"><a href="#完整代码" class="headerlink" title="完整代码"></a>完整代码</h2><p>这里直接给出我写的Promise/A+规范的Javascript实现，供大家参考。后面如果有时间，会考虑详细分析下。</p>
+<ul>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin" target="_blank" rel="noopener">github仓库：promises-aplus-robin</a>（顺手点个star就更好了）</li>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin/blob/main/promises-aplus-robin.js" target="_blank" rel="noopener">源码</a></li>
+<li><a href="https://github.com/cumt-robin/promises-aplus-robin/blob/main/promises-aplus-robin-annotated.js" target="_blank" rel="noopener">源码注释版</a></li>
+</ul>
+<h2 id="缺陷"><a href="#缺陷" class="headerlink" title="缺陷"></a>缺陷</h2><p>我这个版本的Promise/A+规范实现，不具备检测execution context stack为空的能力，所以在细节上会有一点问题（execution context stack还未清空就插入了微任务），无法适配上面那道「<strong>浏览器不讲武德？</strong>」的题目所述场景。</p>
+<h2 id="方法论"><a href="#方法论" class="headerlink" title="方法论"></a>方法论</h2><p>不管是手写实现Promise/A+规范，还是实现其他Native Code，其本质上绕不开以下几点：</p>
+<ul>
+<li>准确理解Native Code实现的能力，就像你理解一个需求要实现哪些功能点一样，并确定实现上的优先级。</li>
+<li>针对每个功能点或者功能描述，逐一用代码实现，优先打通主干流程。</li>
+<li>设计足够丰富的测试用例，回归测试，不断迭代，保证场景的覆盖率，最终打造一段优质的代码。</li>
+</ul>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>看到结尾，相信大家也累了，感谢各位读者的阅读！希望本文对宏任务和微任务的解读能给各位读者带来一点启发。Promise/A+规范总体来说还是比较晦涩难懂的，这对新手来说是不太友好的，因此我建议有一定程度的Promise实际使用经验后再深入学习Promise/A+规范。通过学习和理解Promise/A+规范的实现机制，你会更懂Promise的一些内部细节，对于设计一些复杂的异步过程会有极大的帮助，再不济也能提升你的异步调试和排错能力。</p>
+<p>这里还有一些规范和文章可以参考：</p>
+<ul>
+<li><a href="https://promisesaplus.com/" title="Promises/A+规范" target="_blank" rel="noopener">Promises/A+规范</a></li>
+<li><a href="https://html.spec.whatwg.org/#event-loop-processing-model" title="Event Loop Processing Model" target="_blank" rel="noopener">Event Loop Processing Model</a></li>
+<li><a href="https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/" title="tasks-microtasks-queues-and-schedules" target="_blank" rel="noopener">tasks-microtasks-queues-and-schedules</a></li>
+<li><a href="https://tc39.es/ecma262/#sec-jobs" title="Jobs and Host Operations to Enqueue Jobs" target="_blank" rel="noopener">Jobs and Host Operations to Enqueue Jobs</a></li>
+</ul>
+<p><img src=""data-src="http://qncdn.wbjiang.cn/%E5%89%8D%E7%AB%AF%E5%8F%B8%E5%8D%97%E5%90%8D%E7%89%87%E5%B8%A6%E5%BE%AE%E4%BF%A1.png" alt="公众号-前端司南"></p>
+
+        </div>
+        
+        <div class="level is-size-7 is-uppercase">
+            <div class="level-start">
+                <div class="level-item">
+                    <span class="is-size-6 has-text-grey has-mr-7">#</span>
+                    <a class="has-link-grey -link" href="/tags/Promise-A/">Promise/A+</a>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+    </div>
+</div>
+
+
+
+<div class="card">
+    <div class="card-content">
+        <h3 class="menu-label has-text-centered">喜欢这篇文章？打赏一下作者吧</h3>
+        <div class="buttons is-centered">
+            
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Alipay. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Wechat. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                <!-- Visit https://www.paypal.com/donate/buttons/ to get your donate button -->
+
+<div class="notification is-danger">
+    You forgot to set the <code>business</code> and <code>currency_code</code> for Paypal. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>url</code> Patreon. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+        </div>
+    </div>
+</div>
+
+
+
+<div class="card card-transparent">
+    <div class="level post-navigation is-flex-wrap is-mobile">
+        
+        
+        <div class="level-end">
+            <a class="level level-item has-link-grey  article-nav-next" href="/then,catch,finally如何影响返回的Promise实例状态.html">
+                <span class="level-item">then, catch, finally如何影响返回的Promise实例状态</span>
+                <i class="level-item fas fa-chevron-right"></i>
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+
+</div>
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen  has-order-1 column-left ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <nav class="level">
+            <div class="level-item has-text-centered" style="flex-shrink: 1">
+                <div>
+                    
+                        <img class="image is-128x128 has-mb-6" src="/images/avatar.png" alt="Your name">
+                    
+                    
+                    <p class="is-size-4 is-block">
+                        Your name
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-block">
+                        Your title
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-flex is-flex-center has-text-grey">
+                        <i class="fas fa-map-marker-alt has-mr-7"></i>
+                        <span>Your location</span>
+                    </p>
+                    
+                </div>
+            </div>
+        </nav>
+        <nav class="level is-mobile">
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        文章
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        100
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        分类
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        40
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        标签
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        105
+                    </p>
+                </div>
+            </div>
+        </nav>
+        <div class="level">
+            <a class="level-item button is-link is-rounded" href="https://github.com/ppoffice" target="_blank">
+                关注我</a>
+        </div>
+        
+        
+        <div class="level is-mobile">
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Github" href="https://github.com/ppoffice">
+                
+                <i class="fab fa-github"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Facebook" href="https://facebook.com">
+                
+                <i class="fab fa-facebook"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Twitter" href="https://twitter.com">
+                
+                <i class="fab fa-twitter"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Dribbble" href="https://dribbble.com">
+                
+                <i class="fab fa-dribbble"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="RSS" href="/">
+                
+                <i class="fas fa-rss"></i>
+                
+            </a>
+            
+        </div>
+        
+    </div>
+</div>
+    
+        
+    
+        
+
+<div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            友情链接
+        </h3>
+        <ul class="menu-list">
+        
+            <li>
+                <a class="level is-mobile" href="https://hexo.io" target="_blank">
+                    <span class="level-left">
+                        <span class="level-item">Hexo</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">hexo.io</span>
+                    </span>
+                </a>
+            </li>
+        
+            <li>
+                <a class="level is-mobile" href="https://github.com/ppoffice" target="_blank">
+                    <span class="level-left">
+                        <span class="level-item">PPOffice</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">github.com</span>
+                    </span>
+                </a>
+            </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+
+
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                分类
+            </h3>
+            <ul class="menu-list">
+            <li>
+        <a class="level is-marginless" href="/categories/Nginx/">
+            <span class="level-start">
+                <span class="level-item">Nginx</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/Promise/">
+            <span class="level-start">
+                <span class="level-item">Promise</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/angular/">
+            <span class="level-start">
+                <span class="level-item">angular</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/babel/">
+            <span class="level-start">
+                <span class="level-item">babel</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/canvas/">
+            <span class="level-start">
+                <span class="level-item">canvas</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/css/">
+            <span class="level-start">
+                <span class="level-item">css</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">4</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/demo/">
+            <span class="level-start">
+                <span class="level-item">demo</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">3</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/git/">
+            <span class="level-start">
+                <span class="level-item">git</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">8</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/gulp/">
+            <span class="level-start">
+                <span class="level-item">gulp</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/hexo/">
+            <span class="level-start">
+                <span class="level-item">hexo</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">7</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/html/">
+            <span class="level-start">
+                <span class="level-item">html</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">3</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/html5/">
+            <span class="level-start">
+                <span class="level-item">html5</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/hybrid/">
+            <span class="level-start">
+                <span class="level-item">hybrid</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/java/">
+            <span class="level-start">
+                <span class="level-item">java</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/javascript/">
+            <span class="level-start">
+                <span class="level-item">javascript</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">16</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/leetcode/">
+            <span class="level-start">
+                <span class="level-item">leetcode</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/linux/">
+            <span class="level-start">
+                <span class="level-item">linux</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">6</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/msyql/">
+            <span class="level-start">
+                <span class="level-item">msyql</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/mysql/">
+            <span class="level-start">
+                <span class="level-item">mysql</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/nginx/">
+            <span class="level-start">
+                <span class="level-item">nginx</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/nodejs/">
+            <span class="level-start">
+                <span class="level-item">nodejs</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">3</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/npm/">
+            <span class="level-start">
+                <span class="level-item">npm</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/sass/">
+            <span class="level-start">
+                <span class="level-item">sass</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/vue/">
+            <span class="level-start">
+                <span class="level-item">vue</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">7</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/webpack/">
+            <span class="level-start">
+                <span class="level-item">webpack</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/web前端/">
+            <span class="level-start">
+                <span class="level-item">web前端</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">3</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/写作/">
+            <span class="level-start">
+                <span class="level-item">写作</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/小程序/">
+            <span class="level-start">
+                <span class="level-item">小程序</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a><ul><li>
+        <a class="level is-marginless" href="/categories/小程序/nodejs/">
+            <span class="level-start">
+                <span class="level-item">nodejs</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li></ul></li><li>
+        <a class="level is-marginless" href="/categories/微信公众号/">
+            <span class="level-start">
+                <span class="level-item">微信公众号</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/微信小程序/">
+            <span class="level-start">
+                <span class="level-item">微信小程序</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/架构设计/">
+            <span class="level-start">
+                <span class="level-item">架构设计</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/源码分析/">
+            <span class="level-start">
+                <span class="level-item">源码分析</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/电脑技能/">
+            <span class="level-start">
+                <span class="level-item">电脑技能</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/算法/">
+            <span class="level-start">
+                <span class="level-item">算法</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/编码规范/">
+            <span class="level-start">
+                <span class="level-item">编码规范</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/记事本/">
+            <span class="level-start">
+                <span class="level-item">记事本</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/运维/">
+            <span class="level-start">
+                <span class="level-item">运维</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/部署运维/">
+            <span class="level-start">
+                <span class="level-item">部署运维</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">2</span>
+            </span>
+        </a></li><li>
+        <a class="level is-marginless" href="/categories/面试/">
+            <span class="level-start">
+                <span class="level-item">面试</span>
+            </span>
+            <span class="level-end">
+                <span class="level-item tag">1</span>
+            </span>
+        </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            标签云
+        </h3>
+        <a href="/tags/CNZZ统计/" style="font-size: 10px;">CNZZ统计</a> <a href="/tags/Chrome自动填充/" style="font-size: 10px;">Chrome自动填充</a> <a href="/tags/CommonJS/" style="font-size: 10px;">CommonJS</a> <a href="/tags/ECMAScript5/" style="font-size: 10px;">ECMAScript5</a> <a href="/tags/ES6/" style="font-size: 11.67px;">ES6</a> <a href="/tags/Gerrit/" style="font-size: 10px;">Gerrit</a> <a href="/tags/Next主题/" style="font-size: 10px;">Next主题</a> <a href="/tags/Promise/" style="font-size: 10px;">Promise</a> <a href="/tags/Promise-A/" style="font-size: 10px;">Promise/A+</a> <a href="/tags/TortoiseGIT/" style="font-size: 11.67px;">TortoiseGIT</a> <a href="/tags/VMware/" style="font-size: 11.67px;">VMware</a> <a href="/tags/amd规范/" style="font-size: 10px;">amd规范</a> <a href="/tags/angular/" style="font-size: 11.67px;">angular</a> <a href="/tags/axios/" style="font-size: 10px;">axios</a> <a href="/tags/babel/" style="font-size: 10px;">babel</a> <a href="/tags/bootstrap/" style="font-size: 10px;">bootstrap</a> <a href="/tags/canvas/" style="font-size: 10px;">canvas</a> <a href="/tags/cordova/" style="font-size: 10px;">cordova</a> <a href="/tags/css/" style="font-size: 11.67px;">css</a> <a href="/tags/css单位/" style="font-size: 10px;">css单位</a> <a href="/tags/demo/" style="font-size: 11.67px;">demo</a> <a href="/tags/express/" style="font-size: 13.33px;">express</a> <a href="/tags/git/" style="font-size: 16.67px;">git</a> <a href="/tags/git-push报错/" style="font-size: 10px;">git push报错</a> <a href="/tags/git-remote不同步/" style="font-size: 10px;">git,remote不同步</a> <a href="/tags/github/" style="font-size: 15px;">github</a> <a href="/tags/gitlab/" style="font-size: 10px;">gitlab</a> <a href="/tags/gitment/" style="font-size: 10px;">gitment</a> <a href="/tags/git分支管理/" style="font-size: 10px;">git分支管理</a> <a href="/tags/gradle/" style="font-size: 10px;">gradle</a> <a href="/tags/gulp/" style="font-size: 11.67px;">gulp</a> <a href="/tags/hexo/" style="font-size: 20px;">hexo</a> <a href="/tags/html/" style="font-size: 11.67px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/http-server/" style="font-size: 10px;">http-server</a> <a href="/tags/iconfont/" style="font-size: 10px;">iconfont</a> <a href="/tags/ionic/" style="font-size: 10px;">ionic</a> <a href="/tags/java/" style="font-size: 11.67px;">java</a> <a href="/tags/jdk/" style="font-size: 10px;">jdk</a> <a href="/tags/jquery/" style="font-size: 10px;">jquery</a> <a href="/tags/js模块化/" style="font-size: 15px;">js模块化</a> <a href="/tags/leetcode/" style="font-size: 10px;">leetcode</a> <a href="/tags/linux/" style="font-size: 18.33px;">linux</a> <a href="/tags/livere/" style="font-size: 10px;">livere</a> <a href="/tags/meta/" style="font-size: 10px;">meta</a> <a href="/tags/mysql/" style="font-size: 15px;">mysql</a> <a href="/tags/navicat-for-mysql/" style="font-size: 10px;">navicat for mysql</a> <a href="/tags/ng-zorro/" style="font-size: 10px;">ng-zorro</a> <a href="/tags/nginx/" style="font-size: 13.33px;">nginx</a> <a href="/tags/nodejs/" style="font-size: 18.33px;">nodejs</a> <a href="/tags/npm速度慢/" style="font-size: 10px;">npm速度慢</a> <a href="/tags/ocx/" style="font-size: 10px;">ocx</a> <a href="/tags/progress/" style="font-size: 10px;">progress</a> <a href="/tags/require-js/" style="font-size: 10px;">require.js</a> <a href="/tags/sea-js/" style="font-size: 10px;">sea.js</a> <a href="/tags/shell/" style="font-size: 11.67px;">shell</a> <a href="/tags/socket-io/" style="font-size: 10px;">socket.io</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/ubuntu/" style="font-size: 10px;">ubuntu</a> <a href="/tags/umd规范/" style="font-size: 10px;">umd规范</a> <a href="/tags/valine/" style="font-size: 11.67px;">valine</a> <a href="/tags/vscode/" style="font-size: 10px;">vscode</a> <a href="/tags/vue/" style="font-size: 20px;">vue</a> <a href="/tags/vue-router/" style="font-size: 10px;">vue-router</a> <a href="/tags/vue作用域插槽/" style="font-size: 10px;">vue作用域插槽</a> <a href="/tags/vue升级/" style="font-size: 10px;">vue升级</a> <a href="/tags/webpack/" style="font-size: 10px;">webpack</a> <a href="/tags/webpack4/" style="font-size: 10px;">webpack4</a> <a href="/tags/websocket/" style="font-size: 10px;">websocket</a> <a href="/tags/windows/" style="font-size: 11.67px;">windows</a> <a href="/tags/函数/" style="font-size: 11.67px;">函数</a> <a href="/tags/前后端分离/" style="font-size: 10px;">前后端分离</a> <a href="/tags/前端/" style="font-size: 11.67px;">前端</a> <a href="/tags/前端基础/" style="font-size: 10px;">前端基础</a> <a href="/tags/原型/" style="font-size: 11.67px;">原型</a> <a href="/tags/反向代理/" style="font-size: 10px;">反向代理</a> <a href="/tags/发布npm包/" style="font-size: 10px;">发布npm包</a> <a href="/tags/发布订阅/" style="font-size: 10px;">发布订阅</a> <a href="/tags/呼吸灯/" style="font-size: 10px;">呼吸灯</a> <a href="/tags/回文数/" style="font-size: 10px;">回文数</a> <a href="/tags/地图曲线/" style="font-size: 10px;">地图曲线</a> <a href="/tags/域名解析/" style="font-size: 10px;">域名解析</a> <a href="/tags/微信公众号/" style="font-size: 11.67px;">微信公众号</a> <a href="/tags/微信小程序/" style="font-size: 15px;">微信小程序</a> <a href="/tags/手写代码/" style="font-size: 10px;">手写代码</a> <a href="/tags/执行上下文/" style="font-size: 10px;">执行上下文</a> <a href="/tags/数据类型/" style="font-size: 11.67px;">数据类型</a> <a href="/tags/本地域名/" style="font-size: 10px;">本地域名</a> <a href="/tags/构造函数/" style="font-size: 10px;">构造函数</a> <a href="/tags/架构/" style="font-size: 10px;">架构</a> <a href="/tags/柯里化/" style="font-size: 10px;">柯里化</a> <a href="/tags/正则表达式/" style="font-size: 10px;">正则表达式</a> <a href="/tags/滑块美化/" style="font-size: 10px;">滑块美化</a> <a href="/tags/电脑技能/" style="font-size: 10px;">电脑技能</a> <a href="/tags/百度统计/" style="font-size: 10px;">百度统计</a> <a href="/tags/移动端调试/" style="font-size: 10px;">移动端调试</a> <a href="/tags/继承/" style="font-size: 10px;">继承</a> <a href="/tags/自动化部署/" style="font-size: 11.67px;">自动化部署</a> <a href="/tags/自媒体/" style="font-size: 10px;">自媒体</a> <a href="/tags/自定义tabbar/" style="font-size: 10px;">自定义tabbar</a> <a href="/tags/观察者/" style="font-size: 10px;">观察者</a> <a href="/tags/记事本/" style="font-size: 10px;">记事本</a> <a href="/tags/词法环境/" style="font-size: 10px;">词法环境</a> <a href="/tags/闭包/" style="font-size: 10px;">闭包</a> <a href="/tags/面试题/" style="font-size: 10px;">面试题</a>
+    </div>
+</div>
+
+    
+    
+        <div class="column-right-shadow is-hidden-widescreen ">
+        
+            
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/我以为我很懂Promise.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/pap.png" alt="我以为我很懂Promise，直到我开始实现Promise/A+规范">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2021-03-07T12:57:19.000Z">2021-03-07</time></div>
+                    <a href="/我以为我很懂Promise.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">我以为我很懂Promise，直到我开始实现Promise/A+规范</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/then,catch,finally如何影响返回的Promise实例状态.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="http://qncdn.wbjiang.cn/Promise.jpg" alt="then, catch, finally如何影响返回的Promise实例状态">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-10-16T02:33:06.000Z">2020-10-16</time></div>
+                    <a href="/then,catch,finally如何影响返回的Promise实例状态.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">then, catch, finally如何影响返回的Promise实例状态</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/Promise/">Promise</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="http://qncdn.wbjiang.cn/git%E8%BF%98%E8%AE%A9%E4%BD%A0%E5%A4%B4%E7%96%BC%E5%90%97.jpg" alt="从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-10-16T02:30:06.000Z">2020-10-16</time></div>
+                    <a href="/从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/git/">git</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/函数知识总结.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/%E5%AD%A6%E5%A5%BD%E5%87%BD%E6%95%B0.jpg" alt="彻底搞懂闭包，柯里化，手写代码，金九银十不再丢分！">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-08-29T03:12:13.000Z">2020-08-29</time></div>
+                    <a href="/函数知识总结.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">彻底搞懂闭包，柯里化，手写代码，金九银十不再丢分！</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/解读闭包，这次从ECMAScript词法环境，执行上下文说起.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/%E7%9C%8B%E6%87%82%E8%A7%84%E8%8C%83%E4%B8%BA%E6%89%80%E6%AC%B2%E4%B8%BA.jpg" alt="解读闭包，这次从ECMAScript词法环境，执行上下文说起">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-08-07T06:15:40.000Z">2020-08-07</time></div>
+                    <a href="/解读闭包，这次从ECMAScript词法环境，执行上下文说起.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">解读闭包，这次从ECMAScript词法环境，执行上下文说起</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2021/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2021</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/10/">
+                <span class="level-start">
+                    <span class="level-item">十月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/10/">
+                <span class="level-start">
+                    <span class="level-item">十月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/09/">
+                <span class="level-start">
+                    <span class="level-item">九月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">25</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">6</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">13</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">6</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CNZZ统计/">
+                        <span class="tag">CNZZ统计</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Chrome自动填充/">
+                        <span class="tag">Chrome自动填充</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CommonJS/">
+                        <span class="tag">CommonJS</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ECMAScript5/">
+                        <span class="tag">ECMAScript5</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ES6/">
+                        <span class="tag">ES6</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Gerrit/">
+                        <span class="tag">Gerrit</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Next主题/">
+                        <span class="tag">Next主题</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Promise/">
+                        <span class="tag">Promise</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Promise-A/">
+                        <span class="tag">Promise/A+</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/TortoiseGIT/">
+                        <span class="tag">TortoiseGIT</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/VMware/">
+                        <span class="tag">VMware</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/amd规范/">
+                        <span class="tag">amd规范</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/angular/">
+                        <span class="tag">angular</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/axios/">
+                        <span class="tag">axios</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/babel/">
+                        <span class="tag">babel</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/bootstrap/">
+                        <span class="tag">bootstrap</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/canvas/">
+                        <span class="tag">canvas</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/cordova/">
+                        <span class="tag">cordova</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/css/">
+                        <span class="tag">css</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/css单位/">
+                        <span class="tag">css单位</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/demo/">
+                        <span class="tag">demo</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/express/">
+                        <span class="tag">express</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git/">
+                        <span class="tag">git</span>
+                        <span class="tag is-grey">5</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git-push报错/">
+                        <span class="tag">git push报错</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git-remote不同步/">
+                        <span class="tag">git,remote不同步</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/github/">
+                        <span class="tag">github</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitlab/">
+                        <span class="tag">gitlab</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitment/">
+                        <span class="tag">gitment</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git分支管理/">
+                        <span class="tag">git分支管理</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gradle/">
+                        <span class="tag">gradle</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gulp/">
+                        <span class="tag">gulp</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/hexo/">
+                        <span class="tag">hexo</span>
+                        <span class="tag is-grey">7</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/html/">
+                        <span class="tag">html</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/html5/">
+                        <span class="tag">html5</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/http-server/">
+                        <span class="tag">http-server</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/iconfont/">
+                        <span class="tag">iconfont</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ionic/">
+                        <span class="tag">ionic</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/java/">
+                        <span class="tag">java</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/jdk/">
+                        <span class="tag">jdk</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/jquery/">
+                        <span class="tag">jquery</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/js模块化/">
+                        <span class="tag">js模块化</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/leetcode/">
+                        <span class="tag">leetcode</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/linux/">
+                        <span class="tag">linux</span>
+                        <span class="tag is-grey">6</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/livere/">
+                        <span class="tag">livere</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/meta/">
+                        <span class="tag">meta</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/mysql/">
+                        <span class="tag">mysql</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/navicat-for-mysql/">
+                        <span class="tag">navicat for mysql</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ng-zorro/">
+                        <span class="tag">ng-zorro</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/nginx/">
+                        <span class="tag">nginx</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/nodejs/">
+                        <span class="tag">nodejs</span>
+                        <span class="tag is-grey">6</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/npm速度慢/">
+                        <span class="tag">npm速度慢</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ocx/">
+                        <span class="tag">ocx</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/progress/">
+                        <span class="tag">progress</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/require-js/">
+                        <span class="tag">require.js</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/sea-js/">
+                        <span class="tag">sea.js</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/shell/">
+                        <span class="tag">shell</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/socket-io/">
+                        <span class="tag">socket.io</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/svg/">
+                        <span class="tag">svg</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ubuntu/">
+                        <span class="tag">ubuntu</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/umd规范/">
+                        <span class="tag">umd规范</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/valine/">
+                        <span class="tag">valine</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vscode/">
+                        <span class="tag">vscode</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue/">
+                        <span class="tag">vue</span>
+                        <span class="tag is-grey">7</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue-router/">
+                        <span class="tag">vue-router</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue作用域插槽/">
+                        <span class="tag">vue作用域插槽</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue升级/">
+                        <span class="tag">vue升级</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/webpack/">
+                        <span class="tag">webpack</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/webpack4/">
+                        <span class="tag">webpack4</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/websocket/">
+                        <span class="tag">websocket</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/windows/">
+                        <span class="tag">windows</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/函数/">
+                        <span class="tag">函数</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前后端分离/">
+                        <span class="tag">前后端分离</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端/">
+                        <span class="tag">前端</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端基础/">
+                        <span class="tag">前端基础</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/原型/">
+                        <span class="tag">原型</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/反向代理/">
+                        <span class="tag">反向代理</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/发布npm包/">
+                        <span class="tag">发布npm包</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/发布订阅/">
+                        <span class="tag">发布订阅</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/呼吸灯/">
+                        <span class="tag">呼吸灯</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/回文数/">
+                        <span class="tag">回文数</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/地图曲线/">
+                        <span class="tag">地图曲线</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/域名解析/">
+                        <span class="tag">域名解析</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/微信公众号/">
+                        <span class="tag">微信公众号</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/微信小程序/">
+                        <span class="tag">微信小程序</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/手写代码/">
+                        <span class="tag">手写代码</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/执行上下文/">
+                        <span class="tag">执行上下文</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/数据类型/">
+                        <span class="tag">数据类型</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/本地域名/">
+                        <span class="tag">本地域名</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/构造函数/">
+                        <span class="tag">构造函数</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/架构/">
+                        <span class="tag">架构</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/柯里化/">
+                        <span class="tag">柯里化</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/正则表达式/">
+                        <span class="tag">正则表达式</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/滑块美化/">
+                        <span class="tag">滑块美化</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/电脑技能/">
+                        <span class="tag">电脑技能</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/百度统计/">
+                        <span class="tag">百度统计</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/移动端调试/">
+                        <span class="tag">移动端调试</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/继承/">
+                        <span class="tag">继承</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自动化部署/">
+                        <span class="tag">自动化部署</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自媒体/">
+                        <span class="tag">自媒体</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自定义tabbar/">
+                        <span class="tag">自定义tabbar</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/观察者/">
+                        <span class="tag">观察者</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/记事本/">
+                        <span class="tag">记事本</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/词法环境/">
+                        <span class="tag">词法环境</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/闭包/">
+                        <span class="tag">闭包</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/面试题/">
+                        <span class="tag">面试题</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+        
+        </div>
+    
+</div>
+
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen is-hidden-touch is-hidden-desktop-only has-order-3 column-right ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/我以为我很懂Promise.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/pap.png" alt="我以为我很懂Promise，直到我开始实现Promise/A+规范">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2021-03-07T12:57:19.000Z">2021-03-07</time></div>
+                    <a href="/我以为我很懂Promise.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">我以为我很懂Promise，直到我开始实现Promise/A+规范</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/then,catch,finally如何影响返回的Promise实例状态.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="http://qncdn.wbjiang.cn/Promise.jpg" alt="then, catch, finally如何影响返回的Promise实例状态">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-10-16T02:33:06.000Z">2020-10-16</time></div>
+                    <a href="/then,catch,finally如何影响返回的Promise实例状态.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">then, catch, finally如何影响返回的Promise实例状态</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/Promise/">Promise</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="http://qncdn.wbjiang.cn/git%E8%BF%98%E8%AE%A9%E4%BD%A0%E5%A4%B4%E7%96%BC%E5%90%97.jpg" alt="从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-10-16T02:30:06.000Z">2020-10-16</time></div>
+                    <a href="/从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">从亲身经历谈谈如何用Git分支解决项目生产实践中的痛点</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/git/">git</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/函数知识总结.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/%E5%AD%A6%E5%A5%BD%E5%87%BD%E6%95%B0.jpg" alt="彻底搞懂闭包，柯里化，手写代码，金九银十不再丢分！">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-08-29T03:12:13.000Z">2020-08-29</time></div>
+                    <a href="/函数知识总结.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">彻底搞懂闭包，柯里化，手写代码，金九银十不再丢分！</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/解读闭包，这次从ECMAScript词法环境，执行上下文说起.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" data-src="https://qncdn.wbjiang.cn/%E7%9C%8B%E6%87%82%E8%A7%84%E8%8C%83%E4%B8%BA%E6%89%80%E6%AC%B2%E4%B8%BA.jpg" alt="解读闭包，这次从ECMAScript词法环境，执行上下文说起">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-08-07T06:15:40.000Z">2020-08-07</time></div>
+                    <a href="/解读闭包，这次从ECMAScript词法环境，执行上下文说起.html" class="title has-link-black-ter is-size-6 has-text-weight-normal">解读闭包，这次从ECMAScript词法环境，执行上下文说起</a>
+                    <p class="is-size-7 is-uppercase">
+                        <a class="has-link-grey -link" href="/categories/javascript/">javascript</a>
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2021/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2021</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/10/">
+                <span class="level-start">
+                    <span class="level-item">十月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/10/">
+                <span class="level-start">
+                    <span class="level-item">十月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/09/">
+                <span class="level-start">
+                    <span class="level-item">九月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">25</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">6</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">13</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">6</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">5</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CNZZ统计/">
+                        <span class="tag">CNZZ统计</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Chrome自动填充/">
+                        <span class="tag">Chrome自动填充</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CommonJS/">
+                        <span class="tag">CommonJS</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ECMAScript5/">
+                        <span class="tag">ECMAScript5</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ES6/">
+                        <span class="tag">ES6</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Gerrit/">
+                        <span class="tag">Gerrit</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Next主题/">
+                        <span class="tag">Next主题</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Promise/">
+                        <span class="tag">Promise</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Promise-A/">
+                        <span class="tag">Promise/A+</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/TortoiseGIT/">
+                        <span class="tag">TortoiseGIT</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/VMware/">
+                        <span class="tag">VMware</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/amd规范/">
+                        <span class="tag">amd规范</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/angular/">
+                        <span class="tag">angular</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/axios/">
+                        <span class="tag">axios</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/babel/">
+                        <span class="tag">babel</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/bootstrap/">
+                        <span class="tag">bootstrap</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/canvas/">
+                        <span class="tag">canvas</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/cordova/">
+                        <span class="tag">cordova</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/css/">
+                        <span class="tag">css</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/css单位/">
+                        <span class="tag">css单位</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/demo/">
+                        <span class="tag">demo</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/express/">
+                        <span class="tag">express</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git/">
+                        <span class="tag">git</span>
+                        <span class="tag is-grey">5</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git-push报错/">
+                        <span class="tag">git push报错</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git-remote不同步/">
+                        <span class="tag">git,remote不同步</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/github/">
+                        <span class="tag">github</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitlab/">
+                        <span class="tag">gitlab</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitment/">
+                        <span class="tag">gitment</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/git分支管理/">
+                        <span class="tag">git分支管理</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gradle/">
+                        <span class="tag">gradle</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gulp/">
+                        <span class="tag">gulp</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/hexo/">
+                        <span class="tag">hexo</span>
+                        <span class="tag is-grey">7</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/html/">
+                        <span class="tag">html</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/html5/">
+                        <span class="tag">html5</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/http-server/">
+                        <span class="tag">http-server</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/iconfont/">
+                        <span class="tag">iconfont</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ionic/">
+                        <span class="tag">ionic</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/java/">
+                        <span class="tag">java</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/jdk/">
+                        <span class="tag">jdk</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/jquery/">
+                        <span class="tag">jquery</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/js模块化/">
+                        <span class="tag">js模块化</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/leetcode/">
+                        <span class="tag">leetcode</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/linux/">
+                        <span class="tag">linux</span>
+                        <span class="tag is-grey">6</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/livere/">
+                        <span class="tag">livere</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/meta/">
+                        <span class="tag">meta</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/mysql/">
+                        <span class="tag">mysql</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/navicat-for-mysql/">
+                        <span class="tag">navicat for mysql</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ng-zorro/">
+                        <span class="tag">ng-zorro</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/nginx/">
+                        <span class="tag">nginx</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/nodejs/">
+                        <span class="tag">nodejs</span>
+                        <span class="tag is-grey">6</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/npm速度慢/">
+                        <span class="tag">npm速度慢</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ocx/">
+                        <span class="tag">ocx</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/progress/">
+                        <span class="tag">progress</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/require-js/">
+                        <span class="tag">require.js</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/sea-js/">
+                        <span class="tag">sea.js</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/shell/">
+                        <span class="tag">shell</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/socket-io/">
+                        <span class="tag">socket.io</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/svg/">
+                        <span class="tag">svg</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ubuntu/">
+                        <span class="tag">ubuntu</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/umd规范/">
+                        <span class="tag">umd规范</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/valine/">
+                        <span class="tag">valine</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vscode/">
+                        <span class="tag">vscode</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue/">
+                        <span class="tag">vue</span>
+                        <span class="tag is-grey">7</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue-router/">
+                        <span class="tag">vue-router</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue作用域插槽/">
+                        <span class="tag">vue作用域插槽</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vue升级/">
+                        <span class="tag">vue升级</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/webpack/">
+                        <span class="tag">webpack</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/webpack4/">
+                        <span class="tag">webpack4</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/websocket/">
+                        <span class="tag">websocket</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/windows/">
+                        <span class="tag">windows</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/函数/">
+                        <span class="tag">函数</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前后端分离/">
+                        <span class="tag">前后端分离</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端/">
+                        <span class="tag">前端</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端基础/">
+                        <span class="tag">前端基础</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/原型/">
+                        <span class="tag">原型</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/反向代理/">
+                        <span class="tag">反向代理</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/发布npm包/">
+                        <span class="tag">发布npm包</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/发布订阅/">
+                        <span class="tag">发布订阅</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/呼吸灯/">
+                        <span class="tag">呼吸灯</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/回文数/">
+                        <span class="tag">回文数</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/地图曲线/">
+                        <span class="tag">地图曲线</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/域名解析/">
+                        <span class="tag">域名解析</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/微信公众号/">
+                        <span class="tag">微信公众号</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/微信小程序/">
+                        <span class="tag">微信小程序</span>
+                        <span class="tag is-grey">4</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/手写代码/">
+                        <span class="tag">手写代码</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/执行上下文/">
+                        <span class="tag">执行上下文</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/数据类型/">
+                        <span class="tag">数据类型</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/本地域名/">
+                        <span class="tag">本地域名</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/构造函数/">
+                        <span class="tag">构造函数</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/架构/">
+                        <span class="tag">架构</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/柯里化/">
+                        <span class="tag">柯里化</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/正则表达式/">
+                        <span class="tag">正则表达式</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/滑块美化/">
+                        <span class="tag">滑块美化</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/电脑技能/">
+                        <span class="tag">电脑技能</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/百度统计/">
+                        <span class="tag">百度统计</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/移动端调试/">
+                        <span class="tag">移动端调试</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/继承/">
+                        <span class="tag">继承</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自动化部署/">
+                        <span class="tag">自动化部署</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自媒体/">
+                        <span class="tag">自媒体</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/自定义tabbar/">
+                        <span class="tag">自定义tabbar</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/观察者/">
+                        <span class="tag">观察者</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/记事本/">
+                        <span class="tag">记事本</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/词法环境/">
+                        <span class="tag">词法环境</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/闭包/">
+                        <span class="tag">闭包</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/面试题/">
+                        <span class="tag">面试题</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+    
+    
+</div>
+
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+    <div class="container">
+        <div class="level">
+            <div class="level-start has-text-centered-mobile">
+                <a class="footer-logo is-block has-mb-6" href="/">
+                
+                    <img src="/images/logo.svg" alt="我以为我很懂Promise，直到我开始实现Promise/A+规范" height="28">
+                
+                </a>
+                <p class="is-size-7">
+                &copy; 2021 Tusi&nbsp;
+                Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+                
+                </p>
+            </div>
+            <div class="level-end">
+            
+                <div class="field has-addons is-flex-center-mobile has-mt-5-mobile is-flex-wrap is-flex-middle">
+                
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Creative Commons" href="https://creativecommons.org/">
+                        
+                        <i class="fab fa-creative-commons"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/">
+                        
+                        <i class="fab fa-creative-commons-by"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                </p>
+                
+                </div>
+            
+            </div>
+        </div>
+    </div>
+</footer>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script>
+<script>moment.locale("zh-CN");</script>
+
+<script>
+var IcarusThemeSettings = {
+    article: {
+        highlight: {
+            clipboard: true,
+            fold: 'unfolded'
+        }
+    }
+};
+</script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script>
+
+
+
+    
+    
+    
+    <script src="/js/animation.js"></script>
+    
+
+    
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script>
+    <script src="/js/gallery.js" defer></script>
+    
+
+    
+    
+
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update
+            my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        });
+    });
+</script>
+
+
+    
+    
+<script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.5/unpacked/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    MathJax.Hub.Config({
+        'HTML-CSS': {
+            matchFontHeight: false
+        },
+        SVG: {
+            matchFontHeight: false
+        },
+        CommonHTML: {
+            matchFontHeight: false
+        },
+        tex2jax: {
+            inlineMath: [
+                ['$','$'],
+                ['\\(','\\)']
+            ]
+        }
+    });
+});
+</script>
+
+    
+    
+
+<a id="back-to-top" title="回到顶端" href="javascript:;">
+    <i class="fas fa-chevron-up"></i>
+</a>
+<script src="/js/back-to-top.js" defer></script>
+
+
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+
+
+<script src="/js/main.js" defer></script>
+
+<script src="/js/lazyload.js" defer></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="想要查找什么..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: '文章',
+                PAGES: '页面',
+                CATEGORIES: '分类',
+                TAGS: '标签',
+                UNTITLED: '(无标题)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js" defer></script>
+<link rel="stylesheet" href="/css/search.css">
+<link rel="stylesheet" href="/css/insight.css">
+    
+</body>
+</html>
